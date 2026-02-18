@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IRPIN CITY BIRDS | Ornithological Hub</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --panel: rgba(10, 12, 16, 0.9);
+            --border: rgba(255, 255, 255, 0.1);
+            --c-birds: #ff9800;
+            --c-inat: #74ac00;
+            --c-red: #ef4444;
+            --text: #f0f6fc;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --glass: blur(40px);
+            --sidebar-w: 360px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(0, 0, 0, 0.95);
+            border-bottom: 1px solid var(--border);
+            z-index: 2200;
+            flex-shrink: 0;
+        }
+
+        .logo-main {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 2.2rem;
+            color: #fff;
+            text-transform: uppercase;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        .logo-sub {
+            font-size: 0.75rem;
+            color: var(--c-birds);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-left: 10px;
+        }
+
+        .time-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* Full Background Video */
+        #video-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .side-col {
+            width: var(--sidebar-w);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            pointer-events: auto;
+            position: relative;
+        }
+
+        .glass {
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        #feed {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+        }
+
+        #feed::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        #feed::-webkit-scrollbar-thumb {
+            background: var(--border);
+        }
+
+        .card {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .card-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: block;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+        }
+
+        .stat-lab {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Deep Dive Overlay (Right Side Pop-out) */
+        #deep-dive {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: var(--sidebar-w);
+            height: calc(100% - 40px);
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
+            transform: translateX(120%);
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
+        }
+
+        #deep-dive.active {
+            transform: translateX(0);
+        }
+
+        .close-dive {
+            cursor: pointer;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dive-img {
+            width: 100%;
+            height: 180px;
+            border-radius: 14px;
+            object-fit: cover;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .dive-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .dive-sci {
+            font-size: 0.8rem;
+            font-style: italic;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+        }
+
+        .dive-text {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+            overflow-y: auto;
+        }
+
+        .dive-text::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        .badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-right: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--c-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-trans {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--accent);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+
+        .a-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 10px;
+        }
+
+        .a-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .a-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: 1s;
+        }
+
+        @media (max-width: 900px) {
+            .ui-layer {
+                flex-direction: column;
+                padding: 10px;
+                overflow-y: auto;
+                pointer-events: auto;
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+            .side-col {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div style="display:flex; align-items:baseline;">
+            <div class="logo-main">Irpin City Birds</div>
+            <div class="logo-sub">Ornithological Intelligence Hub</div>
+        </div>
+        <div class="time-box" id="time">00:00:00</div>
+    </header>
+
+    <main>
+        <video id="video-bg" autoplay muted playsinline></video>
+
+        <div class="ui-layer">
+            <!-- Left Panel -->
+            <div class="side-col">
+                <div class="glass" style="flex:1; min-height:500px; position:relative;">
+                    <div class="title">Активність птахів Київська область</div>
+                    <div id="feed"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel Contents -->
+            <div class="side-col">
+                <div class="glass">
+                    <div class="title">Metrics Analytics (Local)</div>
+                    <div class="stat-grid">
+                        <div class="stat-box"><span class="stat-val" id="c-total">0</span><span
+                                class="stat-lab">Видів</span></div>
+                        <div class="stat-box"><span class="stat-val" id="c-threat">0</span><span class="stat-lab">Статус
+                                Загрози</span></div>
+                    </div>
+                </div>
+
+                <div class="glass">
+                    <div class="title">Популяційний Пульс (Taxa)</div>
+                    <div id="stat-taxa"></div>
+                </div>
+
+                <div class="glass">
+                    <div class="title">Weather Sync Irpin</div>
+                    <div id="weather-info" style="font-size:0.75rem; line-height:1.6;">Завантаження...</div>
+                </div>
+
+                <div class="glass">
+                    <div class="title">Real-Time Node Status</div>
+                    <div style="font-size:0.65rem; color:var(--text-dim);">
+                        Source: <b>Aves (Birds) @ 50.51, 30.24</b><br>
+                        Radius: <b>15km (Irpin Focus)</b><br>
+                        Status: <span style="color:var(--c-inat)">● Connected</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description Overlay (Pops out from Right) -->
+            <div id="deep-dive">
+                <div class="close-dive" onclick="closeDive()">✕ Назад</div>
+                <img id="dive-img" class="dive-img" src="" alt="">
+                <h2 id="dive-name" class="dive-name"></h2>
+                <div id="dive-sci" class="dive-sci"></div>
+                <div id="dive-badges"></div>
+                <div id="dive-text" class="dive-text"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const state = {
+            data: [],
+            vIndex: 1,
+            vTotal: 2, // User has only 2 videos for now (1.mp4, 2.mp4)
+            TAXA_COLORS: {
+                'LC': '#58a6ff', 'NT': '#a855f7', 'VU': '#ff9800', 'EN': '#ef4444', 'CR': '#b91c1c', 'Normal': '#ff9800'
+            }
+        };
+
+        function init() {
+            setupVideo();
+            refresh();
+            fetchWeather();
+            setInterval(refresh, 300000); // 5 min
+            setInterval(() => { document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA'); }, 1000);
+        }
+
+        function setupVideo() {
+            const video = document.getElementById('video-bg');
+            state.vIndex = Math.floor(Math.random() * state.vTotal) + 1;
+            video.src = `${state.vIndex}.mp4`;
+
+            video.onended = () => {
+                state.vIndex = Math.floor(Math.random() * state.vTotal) + 1;
+                video.src = `${state.vIndex}.mp4`;
+                video.play();
+            };
+
+            video.onerror = () => {
+                console.warn(`Video ${state.vIndex}.mp4 not found.`);
+                setTimeout(() => {
+                    state.vIndex = Math.floor(Math.random() * state.vTotal) + 1;
+                    video.src = `${state.vIndex}.mp4`;
+                    video.play();
+                }, 5000);
+            };
+        }
+
+        async function refresh() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '<div style="padding:20px; color:var(--text-dim); font-size: 0.75rem; text-align:center;">Сканування бази даних Київської області...</div>';
+
+            try {
+                // Fetching for Irpin coordinates
+                const res = await fetch(`https://api.inaturalist.org/v1/observations?taxon_id=3&lat=50.51&lng=30.24&radius=15&per_page=100&order=desc&order_by=created_at`);
+                const json = await res.json();
+
+                state.data = (json.results || []).map(o => ({
+                    id: o.id,
+                    name: o.taxon ? (o.taxon.preferred_common_name || o.taxon.name) : 'Невідомий птах',
+                    sci: o.taxon ? o.taxon.name : '',
+                    img: (o.photos && o.photos[0]) ? o.photos[0].url.replace('square', 'medium') : 'https://via.placeholder.com/150/111/fff?text=iNat',
+                    loc: o.place_guess || 'Київська область',
+                    iucn: o.taxon && o.taxon.conservation_status ? o.taxon.conservation_status.status : 'LC',
+                    src: 'iNaturalist'
+                }));
+
+                draw();
+            } catch (e) {
+                console.error(e);
+                feed.innerHTML = '<div style="padding:20px; color:var(--c-red); text-align:center;">Помилка API вузла UA SYNC.</div>';
+            }
+        }
+
+        function draw() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = '';
+
+            if (state.data.length === 0) {
+                feed.innerHTML = '<div style="padding:20px; color:var(--text-dim); text-align:center;">У Ірпені наразі стабільно.</div>';
+                return;
+            }
+
+            // Filtering for unique species to show a cleaner list like in poster
+            const speciesMap = new Map();
+            state.data.forEach(d => { if (!speciesMap.has(d.sci)) speciesMap.set(d.sci, d); });
+            const list = Array.from(speciesMap.values());
+
+            document.getElementById('c-total').innerText = list.length;
+
+            list.forEach(d => {
+                const color = state.TAXA_COLORS[d.iucn] || state.TAXA_COLORS.Normal;
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div style="position:relative;">
+                        <img src="${d.img}" class="card-img">
+                        ${['VU', 'EN', 'CR'].includes(d.iucn) ? '<div style="position:absolute; top:-4px; right:-4px; width:10px; height:10px; background:var(--c-red); border-radius:50%; border:2px solid var(--panel);"></div>' : ''}
+                    </div>
+                    <div class="card-info">
+                        <div class="card-name">${d.name}</div>
+                        <div class="card-meta">
+                            <span style="color:${color}">●</span> ${d.loc} 
+                            <span style="font-size:0.5rem; background:rgba(255,255,255,0.05); padding:2px 4px; border-radius:3px;">${d.iucn}</span>
+                        </div>
+                    </div>`;
+                card.onclick = () => showDive(d);
+                feed.appendChild(card);
+            });
+
+            // Brief Stats
+            const orders = {};
+            state.data.forEach(d => { orders[d.iucn] = (orders[d.iucn] || 0) + 1; });
+            document.getElementById('stat-taxa').innerHTML = Object.entries(orders).map(([n, c]) => `
+                <div class="a-row"><span>IUCN ${n} Status</span><span>${c}</span></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / state.data.length * 100}%; background:${state.TAXA_COLORS[n] || '#fff'}"></div></div>
+            `).join('');
+        }
+
+        async function fetchWeather() {
+            try {
+                const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=50.51&longitude=30.24&current_weather=true`);
+                const data = await r.json();
+                const cw = data.current_weather;
+                document.getElementById('weather-info').innerHTML = `
+                    Температура: <span style="color:#fff">${cw.temperature}°C</span><br>
+                    Вітер: <span style="color:#fff">${cw.windspeed} км/год</span><br>
+                    Статус: <span style="color:var(--accent)">Irpin Sync Fixed</span>
+                `;
+            } catch (e) { }
+        }
+
+        async function showDive(d) {
+            const p = document.getElementById('deep-dive');
+            document.getElementById('dive-img').src = d.img;
+            document.getElementById('dive-name').innerText = d.name;
+            document.getElementById('dive-sci').innerText = d.sci;
+            document.getElementById('dive-badges').innerHTML = `<span class="badge ${['VU', 'EN', 'CR'].includes(d.iucn) ? 'badge-red' : 'badge-trans'}">IUCN: ${d.iucn}</span>`;
+            document.getElementById('dive-text').innerText = 'Завантаження наукової довідки...';
+            p.classList.add('active');
+
+            try {
+                let w = await fetch(`https://uk.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.name.split(' (')[0])}`);
+                let j = await w.json();
+                if (j.extract) {
+                    document.getElementById('dive-text').innerText = j.extract;
+                } else {
+                    let en = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.sci)}`);
+                    let ej = await en.json();
+                    if (ej.extract) {
+                        const tr = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(ej.extract.substring(0, 500))}`);
+                        const tj = await tr.json();
+                        document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join("");
+                        document.getElementById('dive-badges').innerHTML += `<span class="badge badge-trans">UA AI SYNC</span>`;
+                    } else {
+                        document.getElementById('dive-text').innerText = "Опис синхронізується з базою даних.";
+                    }
+                }
+            } catch (e) { document.getElementById('dive-text').innerText = "Вузол знань тимчасово офлайн."; }
+        }
+
+        function closeDive() {
+            document.getElementById('deep-dive').classList.remove('active');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
