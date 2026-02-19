@@ -799,10 +799,11 @@
         // ─── VIDEO SETUP ─────────────────────────────────────────────
         function setupVideo() {
             const video = document.getElementById('video-bg');
-            state.vIndex = 1; // Start from the first video
+            state.vIndex = 1;
 
             const setVideoSource = () => {
                 video.src = `${state.vIndex}.mp4`;
+                video.play().catch(e => { });
             };
 
             setVideoSource();
@@ -810,16 +811,13 @@
             video.onended = () => {
                 state.vIndex = (state.vIndex % state.vTotal) + 1;
                 setVideoSource();
-                video.play();
             };
 
             video.onerror = () => {
-                // If video fails, try the next one after a short delay
                 setTimeout(() => {
                     state.vIndex = (state.vIndex % state.vTotal) + 1;
                     setVideoSource();
-                    video.play();
-                }, 2000);
+                }, 100);
             };
         }
 
