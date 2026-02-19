@@ -803,7 +803,14 @@
 
             const setVideoSource = () => {
                 video.src = `${state.vIndex}.mp4`;
-                video.play().catch(e => { });
+                video.play().catch(e => {
+                    // Fallback: play on first user interaction if blocked by browser
+                    const startPlayback = () => {
+                        video.play().catch(err => { });
+                        document.removeEventListener('click', startPlayback);
+                    };
+                    document.addEventListener('click', startPlayback);
+                });
             };
 
             setVideoSource();
@@ -814,10 +821,11 @@
             };
 
             video.onerror = () => {
+                // Skip missing files almost instantly (10ms delay to prevent recursion lock)
                 setTimeout(() => {
                     state.vIndex = (state.vIndex % state.vTotal) + 1;
                     setVideoSource();
-                }, 100);
+                }, 10);
             };
         }
 
