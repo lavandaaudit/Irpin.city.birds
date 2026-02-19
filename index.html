@@ -762,195 +762,194 @@
     </main>
 
     <script>
-    const state = {
-        irpin: [],
-        kyiv: [],
-        oblast: [],
-        activeTab: 'irpin',
-        vIndex: 1,
-        vTotal: 10,
-        TAXA_COLORS: {
-            'LC': '#58a6ff', 'NT': '#a855f7', 'VU': '#ff9800',
-            'EN': '#ef4444', 'CR': '#b91c1c', 'DD': '#6b7280', 'Normal': '#ff9800'
-        }
-    };
+        const state = {
+            irpin: [],
+            kyiv: [],
+            oblast: [],
+            activeTab: 'irpin',
+            vIndex: 1,
+            vTotal: 10,
+            TAXA_COLORS: {
+                'LC': '#58a6ff', 'NT': '#a855f7', 'VU': '#ff9800',
+                'EN': '#ef4444', 'CR': '#b91c1c', 'DD': '#6b7280', 'Normal': '#ff9800'
+            }
+        };
 
-    // ─── INIT ───────────────────────────────────────────────────
-    function init() {
-        setupVideo();
-        setInterval(() => {
-            document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA');
-        }, 1000);
+        // ─── INIT ───────────────────────────────────────────────────
+        function init() {
+            setupVideo();
+            setInterval(() => {
+                document.getElementById('time').innerText = new Date().toLocaleTimeString('uk-UA');
+            }, 1000);
 
-        // Fetch all three zones in parallel
-        fetchZone('irpin');
-        fetchZone('kyiv');
-        fetchZoneOblast();
-        fetchWeather();
-
-        setInterval(() => {
+            // Fetch all three zones in parallel
             fetchZone('irpin');
             fetchZone('kyiv');
             fetchZoneOblast();
             fetchWeather();
-        }, 300000); // refresh every 5 min
-    }
 
-    // ─── VIDEO SETUP ─────────────────────────────────────────────
-    function setupVideo() {
-        const video = document.getElementById('video-bg');
-        const pickNext = () => {
-            let next;
-            do {
-                next = Math.floor(Math.random() * state.vTotal) + 1;
-            } while (next === state.vIndex && state.vTotal > 1);
-            state.vIndex = next;
-            video.src = `${state.vIndex}.mp4`;
-        };
+            setInterval(() => {
+                fetchZone('irpin');
+                fetchZone('kyiv');
+                fetchZoneOblast();
+                fetchWeather();
+            }, 300000); // refresh every 5 min
+        }
 
-        pickNext();
+        // ─── VIDEO SETUP ─────────────────────────────────────────────
+        function setupVideo() {
+            const video = document.getElementById('video-bg');
+            state.vIndex = 1; // Start from the first video
 
-        video.onended = () => {
-            pickNext();
-            video.play();
-        };
+            const setVideoSource = () => {
+                video.src = `${state.vIndex}.mp4`;
+            };
 
-        video.onerror = () => {
-            // If video doesn't exist, try another one after a short delay
-            setTimeout(() => {
-                pickNext();
+            setVideoSource();
+
+            video.onended = () => {
+                state.vIndex = (state.vIndex % state.vTotal) + 1;
+                setVideoSource();
                 video.play();
-            }, 2000);
+            };
+
+            video.onerror = () => {
+                // If video fails, try the next one after a short delay
+                setTimeout(() => {
+                    state.vIndex = (state.vIndex % state.vTotal) + 1;
+                    setVideoSource();
+                    video.play();
+                }, 2000);
+            };
+        }
+
+        // ─── FETCH ZONE DATA ─────────────────────────────────────────
+        const ZONES = {
+            irpin: { lat: 50.51, lng: 30.24, radius: 15, label: 'Ірпінь' },
+            kyiv: { lat: 50.45, lng: 30.52, radius: 20, label: 'Київ' },
         };
-    }
 
-    // ─── FETCH ZONE DATA ─────────────────────────────────────────
-    const ZONES = {
-        irpin:  { lat: 50.51,  lng: 30.24, radius: 15,  label: 'Ірпінь' },
-        kyiv:   { lat: 50.45,  lng: 30.52, radius: 20,  label: 'Київ' },
-    };
-
-    async function fetchZone(zone) {
-        const z = ZONES[zone];
-        try {
-            const res = await fetch(
-                `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=${z.lat}&lng=${z.lng}&radius=${z.radius}&per_page=100&order=desc&order_by=created_at&quality_grade=research`
-            );
-            const json = await res.json();
-            state[zone] = parseObs(json.results || []);
-            if (state.activeTab === zone) renderFeed();
-            updateMetrics();
-        } catch (e) {
-            console.warn(`Zone ${zone} fetch error`, e);
+        async function fetchZone(zone) {
+            const z = ZONES[zone];
+            try {
+                const res = await fetch(
+                    `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=${z.lat}&lng=${z.lng}&radius=${z.radius}&per_page=100&order=desc&order_by=created_at&quality_grade=research`
+                );
+                const json = await res.json();
+                state[zone] = parseObs(json.results || []);
+                if (state.activeTab === zone) renderFeed();
+                updateMetrics();
+            } catch (e) {
+                console.warn(`Zone ${zone} fetch error`, e);
+            }
         }
-    }
 
-    // Oblast: wider coverage, grab top species by count
-    async function fetchZoneOblast() {
-        try {
-            // Species endpoint – returns top species by observation count in Kyiv Oblast
-            const resSpecies = await fetch(
-                `https://api.inaturalist.org/v1/observations/species_counts?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=20`
-            );
-            const jsSpecies = await resSpecies.json();
+        // Oblast: wider coverage, grab top species by count
+        async function fetchZoneOblast() {
+            try {
+                // Species endpoint – returns top species by observation count in Kyiv Oblast
+                const resSpecies = await fetch(
+                    `https://api.inaturalist.org/v1/observations/species_counts?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=20`
+                );
+                const jsSpecies = await resSpecies.json();
 
-            // Total observations count for the oblast
-            const resCount = await fetch(
-                `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=1`
-            );
-            const jsCount = await resCount.json();
+                // Total observations count for the oblast
+                const resCount = await fetch(
+                    `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=1`
+                );
+                const jsCount = await resCount.json();
 
-            const totalObs = jsCount.total_results || 0;
-            const topSpecies = (jsSpecies.results || []).map(r => ({
-                id: r.taxon.id,
-                name: r.taxon.preferred_common_name || r.taxon.name,
-                sci: r.taxon.name,
-                count: r.count,
-                img: r.taxon.default_photo ? r.taxon.default_photo.square_url : null,
-                iucn: r.taxon.conservation_status ? r.taxon.conservation_status.status_name : 'LC'
+                const totalObs = jsCount.total_results || 0;
+                const topSpecies = (jsSpecies.results || []).map(r => ({
+                    id: r.taxon.id,
+                    name: r.taxon.preferred_common_name || r.taxon.name,
+                    sci: r.taxon.name,
+                    count: r.count,
+                    img: r.taxon.default_photo ? r.taxon.default_photo.square_url : null,
+                    iucn: r.taxon.conservation_status ? r.taxon.conservation_status.status_name : 'LC'
+                }));
+
+                document.getElementById('c-oblast-obs').innerText = totalObs >= 1000
+                    ? (totalObs / 1000).toFixed(1) + 'k' : totalObs;
+                document.getElementById('c-oblast-species').innerText = jsSpecies.total_results || topSpecies.length;
+
+                renderTopSpecies(topSpecies);
+
+                // Also add oblast general feed to state
+                const resFeed = await fetch(
+                    `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=80&order=desc&order_by=created_at&quality_grade=research`
+                );
+                const jsFeed = await resFeed.json();
+                state.oblast = parseObs(jsFeed.results || []);
+                if (state.activeTab === 'oblast') renderFeed();
+                updateMetrics();
+
+            } catch (e) {
+                console.warn('Oblast fetch error', e);
+                document.getElementById('top-species-list').innerHTML =
+                    '<div style="color:var(--text-dim); font-size:0.7rem; text-align:center;">Дані недоступні</div>';
+            }
+        }
+
+        function parseObs(results) {
+            return results.map(o => ({
+                id: o.id,
+                name: o.taxon ? (o.taxon.preferred_common_name || o.taxon.name) : 'Невідомий птах',
+                sci: o.taxon ? o.taxon.name : '',
+                img: (o.photos && o.photos[0])
+                    ? o.photos[0].url.replace('square', 'medium')
+                    : 'https://via.placeholder.com/150/111/fff?text=iNat',
+                thumb: (o.photos && o.photos[0]) ? o.photos[0].url : null,
+                loc: o.place_guess || 'Київська область',
+                date: o.observed_on || o.created_at ? (o.observed_on || o.created_at.slice(0, 10)) : '—',
+                iucn: (o.taxon && o.taxon.conservation_status) ? o.taxon.conservation_status.status : 'LC',
+                allPhotos: (o.photos || []).map(p => p.url.replace('square', 'medium')),
+                obscured: o.obscured,
+                quality: o.quality_grade,
+                user: o.user ? o.user.login : '—'
             }));
-
-            document.getElementById('c-oblast-obs').innerText = totalObs >= 1000
-                ? (totalObs / 1000).toFixed(1) + 'k' : totalObs;
-            document.getElementById('c-oblast-species').innerText = jsSpecies.total_results || topSpecies.length;
-
-            renderTopSpecies(topSpecies);
-
-            // Also add oblast general feed to state
-            const resFeed = await fetch(
-                `https://api.inaturalist.org/v1/observations?taxon_id=3&lat=50.45&lng=30.52&radius=80&per_page=80&order=desc&order_by=created_at&quality_grade=research`
-            );
-            const jsFeed = await resFeed.json();
-            state.oblast = parseObs(jsFeed.results || []);
-            if (state.activeTab === 'oblast') renderFeed();
-            updateMetrics();
-
-        } catch (e) {
-            console.warn('Oblast fetch error', e);
-            document.getElementById('top-species-list').innerHTML =
-                '<div style="color:var(--text-dim); font-size:0.7rem; text-align:center;">Дані недоступні</div>';
         }
-    }
 
-    function parseObs(results) {
-        return results.map(o => ({
-            id: o.id,
-            name: o.taxon ? (o.taxon.preferred_common_name || o.taxon.name) : 'Невідомий птах',
-            sci: o.taxon ? o.taxon.name : '',
-            img: (o.photos && o.photos[0])
-                ? o.photos[0].url.replace('square', 'medium')
-                : 'https://via.placeholder.com/150/111/fff?text=iNat',
-            thumb: (o.photos && o.photos[0]) ? o.photos[0].url : null,
-            loc: o.place_guess || 'Київська область',
-            date: o.observed_on || o.created_at ? (o.observed_on || o.created_at.slice(0,10)) : '—',
-            iucn: (o.taxon && o.taxon.conservation_status) ? o.taxon.conservation_status.status : 'LC',
-            allPhotos: (o.photos || []).map(p => p.url.replace('square', 'medium')),
-            obscured: o.obscured,
-            quality: o.quality_grade,
-            user: o.user ? o.user.login : '—'
-        }));
-    }
+        // ─── TAB SWITCH ──────────────────────────────────────────────
+        function switchTab(zone) {
+            state.activeTab = zone;
+            ['irpin', 'kyiv', 'oblast'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle('active', t === zone);
+            });
+            renderFeed();
+        }
 
-    // ─── TAB SWITCH ──────────────────────────────────────────────
-    function switchTab(zone) {
-        state.activeTab = zone;
-        ['irpin','kyiv','oblast'].forEach(t => {
-            document.getElementById(`tab-${t}`).classList.toggle('active', t === zone);
-        });
-        renderFeed();
-    }
+        // ─── RENDER FEED ─────────────────────────────────────────────
+        function renderFeed() {
+            const feed = document.getElementById('feed');
+            const data = state[state.activeTab];
 
-    // ─── RENDER FEED ─────────────────────────────────────────────
-    function renderFeed() {
-        const feed = document.getElementById('feed');
-        const data = state[state.activeTab];
-
-        if (!data || data.length === 0) {
-            feed.innerHTML = `<div style="padding:20px; color:var(--text-dim); font-size:0.75rem; text-align:center;">
+            if (!data || data.length === 0) {
+                feed.innerHTML = `<div style="padding:20px; color:var(--text-dim); font-size:0.75rem; text-align:center;">
                 Сканування бази даних...<br>
                 <div class="loader-dots" style="margin-top:8px; justify-content:center;"><span></span><span></span><span></span></div>
             </div>`;
-            return;
-        }
+                return;
+            }
 
-        // Unique by species
-        const speciesMap = new Map();
-        data.forEach(d => { if (!speciesMap.has(d.sci)) speciesMap.set(d.sci, d); });
-        const list = Array.from(speciesMap.values());
+            // Unique by species
+            const speciesMap = new Map();
+            data.forEach(d => { if (!speciesMap.has(d.sci)) speciesMap.set(d.sci, d); });
+            const list = Array.from(speciesMap.values());
 
-        document.getElementById('c-total').innerText = list.length;
+            document.getElementById('c-total').innerText = list.length;
 
-        // Count threats
-        const threatened = list.filter(d => ['VU','EN','CR'].includes(d.iucn)).length;
-        document.getElementById('c-threat').innerText = threatened;
+            // Count threats
+            const threatened = list.filter(d => ['VU', 'EN', 'CR'].includes(d.iucn)).length;
+            document.getElementById('c-threat').innerText = threatened;
 
-        feed.innerHTML = '';
-        list.forEach(d => {
-            const color = state.TAXA_COLORS[d.iucn] || state.TAXA_COLORS.Normal;
-            const isThreaten = ['VU','EN','CR'].includes(d.iucn);
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
+            feed.innerHTML = '';
+            list.forEach(d => {
+                const color = state.TAXA_COLORS[d.iucn] || state.TAXA_COLORS.Normal;
+                const isThreaten = ['VU', 'EN', 'CR'].includes(d.iucn);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
                 <div style="position:relative;">
                     <img src="${d.img}" class="card-img" onerror="this.src='https://via.placeholder.com/50/111/888?text=🐦'">
                     ${isThreaten ? '<div style="position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:var(--c-red);border-radius:50%;border:2px solid var(--panel);"></div>' : ''}
@@ -968,160 +967,160 @@
                         <span>👤 ${d.user}</span>
                     </div>
                 </div>`;
-            card.onclick = () => showDive(d);
-            feed.appendChild(card);
-        });
+                card.onclick = () => showDive(d);
+                feed.appendChild(card);
+            });
 
-        updateIucnBars(data);
-    }
+            updateIucnBars(data);
+        }
 
-    // ─── UPDATE IUCN BARS ────────────────────────────────────────
-    function updateIucnBars(data) {
-        const orders = {};
-        data.forEach(d => { orders[d.iucn] = (orders[d.iucn] || 0) + 1; });
-        const total = data.length;
-        document.getElementById('stat-taxa').innerHTML = Object.entries(orders)
-            .sort((a,b) => b[1]-a[1])
-            .map(([n, c]) => `
+        // ─── UPDATE IUCN BARS ────────────────────────────────────────
+        function updateIucnBars(data) {
+            const orders = {};
+            data.forEach(d => { orders[d.iucn] = (orders[d.iucn] || 0) + 1; });
+            const total = data.length;
+            document.getElementById('stat-taxa').innerHTML = Object.entries(orders)
+                .sort((a, b) => b[1] - a[1])
+                .map(([n, c]) => `
                 <div class="a-row">
                     <span>IUCN <b>${n}</b></span>
                     <span>${c}</span>
                 </div>
-                <div class="a-bar"><div class="a-fill" style="width:${c/total*100}%; background:${state.TAXA_COLORS[n] || '#fff'}"></div></div>
+                <div class="a-bar"><div class="a-fill" style="width:${c / total * 100}%; background:${state.TAXA_COLORS[n] || '#fff'}"></div></div>
             `).join('');
-    }
+        }
 
-    function updateMetrics() {
-        // Kyiv species count
-        const kyivMap = new Map();
-        state.kyiv.forEach(d => { if (!kyivMap.has(d.sci)) kyivMap.set(d.sci, d); });
-        document.getElementById('c-kyiv-species').innerText = kyivMap.size || '—';
-    }
+        function updateMetrics() {
+            // Kyiv species count
+            const kyivMap = new Map();
+            state.kyiv.forEach(d => { if (!kyivMap.has(d.sci)) kyivMap.set(d.sci, d); });
+            document.getElementById('c-kyiv-species').innerText = kyivMap.size || '—';
+        }
 
-    // ─── TOP SPECIES (OBLAST) ────────────────────────────────────
-    function renderTopSpecies(list) {
-        if (!list.length) return;
-        const max = list[0].count;
-        const el = document.getElementById('top-species-list');
-        el.innerHTML = list.slice(0, 8).map((s, i) => {
-            const color = i === 0 ? '#ff9800' : i === 1 ? '#8b949e' : i === 2 ? '#b87333' : 'var(--text-dim)';
-            const barColor = state.TAXA_COLORS[s.iucn] || state.TAXA_COLORS.Normal;
-            return `
+        // ─── TOP SPECIES (OBLAST) ────────────────────────────────────
+        function renderTopSpecies(list) {
+            if (!list.length) return;
+            const max = list[0].count;
+            const el = document.getElementById('top-species-list');
+            el.innerHTML = list.slice(0, 8).map((s, i) => {
+                const color = i === 0 ? '#ff9800' : i === 1 ? '#8b949e' : i === 2 ? '#b87333' : 'var(--text-dim)';
+                const barColor = state.TAXA_COLORS[s.iucn] || state.TAXA_COLORS.Normal;
+                return `
             <div class="obl-bar-wrap">
                 <div class="obl-bar-label">
-                    <span>${i+1}. ${s.name}</span>
+                    <span>${i + 1}. ${s.name}</span>
                     <span style="color:${color}; font-weight:700; font-family:'JetBrains Mono',mono;">${s.count}</span>
                 </div>
                 <div class="obl-bar">
-                    <div class="obl-bar-fill" style="width:${s.count/max*100}%; background:${barColor};"></div>
+                    <div class="obl-bar-fill" style="width:${s.count / max * 100}%; background:${barColor};"></div>
                 </div>
             </div>`;
-        }).join('');
-    }
+            }).join('');
+        }
 
-    // ─── DEEP DIVE ───────────────────────────────────────────────
-    async function showDive(d) {
-        const p = document.getElementById('deep-dive');
-        document.getElementById('dive-img').src = d.img;
-        document.getElementById('dive-name').innerText = d.name;
-        document.getElementById('dive-sci').innerText = d.sci;
-        document.getElementById('dive-text').innerText = 'Завантаження наукової довідки...';
-        document.getElementById('dive-obs-section').innerHTML = '';
+        // ─── DEEP DIVE ───────────────────────────────────────────────
+        async function showDive(d) {
+            const p = document.getElementById('deep-dive');
+            document.getElementById('dive-img').src = d.img;
+            document.getElementById('dive-name').innerText = d.name;
+            document.getElementById('dive-sci').innerText = d.sci;
+            document.getElementById('dive-text').innerText = 'Завантаження наукової довідки...';
+            document.getElementById('dive-obs-section').innerHTML = '';
 
-        const isThreaten = ['VU','EN','CR'].includes(d.iucn);
-        document.getElementById('dive-badges').innerHTML = `
+            const isThreaten = ['VU', 'EN', 'CR'].includes(d.iucn);
+            document.getElementById('dive-badges').innerHTML = `
             <span class="badge ${isThreaten ? 'badge-red' : 'badge-trans'}">IUCN: ${d.iucn}</span>
             <span class="badge badge-green">iNaturalist</span>
         `;
-        p.classList.add('active');
+            p.classList.add('active');
 
-        // Fetch all observations of this species in region
-        try {
-            const obsRes = await fetch(
-                `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(d.sci)}&lat=50.45&lng=30.52&radius=80&per_page=5&order=desc&order_by=created_at&photos=true`
-            );
-            const obsJson = await obsRes.json();
-            const obsSection = document.getElementById('dive-obs-section');
-            const recent = (obsJson.results || []).slice(0, 4);
+            // Fetch all observations of this species in region
+            try {
+                const obsRes = await fetch(
+                    `https://api.inaturalist.org/v1/observations?taxon_name=${encodeURIComponent(d.sci)}&lat=50.45&lng=30.52&radius=80&per_page=5&order=desc&order_by=created_at&photos=true`
+                );
+                const obsJson = await obsRes.json();
+                const obsSection = document.getElementById('dive-obs-section');
+                const recent = (obsJson.results || []).slice(0, 4);
 
-            if (recent.length > 0) {
-                obsSection.innerHTML = `<div class="dive-section-title">🗺️ Останні спостереження — Київська обл.</div>
+                if (recent.length > 0) {
+                    obsSection.innerHTML = `<div class="dive-section-title">🗺️ Останні спостереження — Київська обл.</div>
                 <div class="dive-obs-list">
                 ${recent.map(o => `
                     <div class="dive-obs-item">
                         <img class="dive-obs-img" src="${o.photos[0] ? o.photos[0].url : ''}" onerror="this.style.display='none'">
                         <div class="dive-obs-info">
                             <div class="dive-obs-loc">📍 ${o.place_guess || 'Київська область'}</div>
-                            <div class="dive-obs-date">📅 ${(o.observed_on || '').slice(0,10)} · 👤 ${o.user ? o.user.login : '—'}</div>
+                            <div class="dive-obs-date">📅 ${(o.observed_on || '').slice(0, 10)} · 👤 ${o.user ? o.user.login : '—'}</div>
                         </div>
                     </div>`).join('')}
                 </div>`;
-            }
-        } catch(e) {}
-
-        // Wikipedia info
-        try {
-            const w = await fetch(`https://uk.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.name.split(' (')[0])}`);
-            const j = await w.json();
-            if (j.extract) {
-                document.getElementById('dive-text').innerText = j.extract;
-            } else {
-                const en = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.sci)}`);
-                const ej = await en.json();
-                if (ej.extract) {
-                    const tr = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(ej.extract.substring(0, 500))}`);
-                    const tj = await tr.json();
-                    document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join('');
-                    document.getElementById('dive-badges').innerHTML +=
-                        `<span class="badge badge-trans">UA AI SYNC</span>`;
-                } else {
-                    document.getElementById('dive-text').innerText = 'Опис синхронізується з базою даних.';
                 }
+            } catch (e) { }
+
+            // Wikipedia info
+            try {
+                const w = await fetch(`https://uk.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.name.split(' (')[0])}`);
+                const j = await w.json();
+                if (j.extract) {
+                    document.getElementById('dive-text').innerText = j.extract;
+                } else {
+                    const en = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(d.sci)}`);
+                    const ej = await en.json();
+                    if (ej.extract) {
+                        const tr = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=uk&dt=t&q=${encodeURIComponent(ej.extract.substring(0, 500))}`);
+                        const tj = await tr.json();
+                        document.getElementById('dive-text').innerText = tj[0].map(x => x[0]).join('');
+                        document.getElementById('dive-badges').innerHTML +=
+                            `<span class="badge badge-trans">UA AI SYNC</span>`;
+                    } else {
+                        document.getElementById('dive-text').innerText = 'Опис синхронізується з базою даних.';
+                    }
+                }
+            } catch (e) {
+                document.getElementById('dive-text').innerText = 'Вузол знань тимчасово офлайн.';
             }
-        } catch (e) {
-            document.getElementById('dive-text').innerText = 'Вузол знань тимчасово офлайн.';
         }
-    }
 
-    function closeDive() {
-        document.getElementById('deep-dive').classList.remove('active');
-    }
+        function closeDive() {
+            document.getElementById('deep-dive').classList.remove('active');
+        }
 
-    // ─── WEATHER ─────────────────────────────────────────────────
-    async function fetchWeather() {
-        try {
-            const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=50.51&longitude=30.24&current_weather=true&hourly=relative_humidity_2m,precipitation_probability&timezone=Europe/Kiev`);
-            const data = await r.json();
-            const cw = data.current_weather;
-            const wDescription = {
-                0: 'Ясно ☀️', 1: 'Переважно ясно 🌤️', 2: 'Хмарно ⛅', 3: 'Похмуро ☁️',
-                45: 'Туман 🌫️', 48: 'Крижаний туман 🌫️', 51: 'Мряка 🌦️',
-                61: 'Дощ 🌧️', 71: 'Сніг ❄️', 95: 'Гроза ⛈️'
-            }[cw.weathercode] || `Код ${cw.weathercode}`;
+        // ─── WEATHER ─────────────────────────────────────────────────
+        async function fetchWeather() {
+            try {
+                const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=50.51&longitude=30.24&current_weather=true&hourly=relative_humidity_2m,precipitation_probability&timezone=Europe/Kiev`);
+                const data = await r.json();
+                const cw = data.current_weather;
+                const wDescription = {
+                    0: 'Ясно ☀️', 1: 'Переважно ясно 🌤️', 2: 'Хмарно ⛅', 3: 'Похмуро ☁️',
+                    45: 'Туман 🌫️', 48: 'Крижаний туман 🌫️', 51: 'Мряка 🌦️',
+                    61: 'Дощ 🌧️', 71: 'Сніг ❄️', 95: 'Гроза ⛈️'
+                }[cw.weathercode] || `Код ${cw.weathercode}`;
 
-            // Get current hour humidity
-            const now = new Date();
-            const hourIdx = now.getHours();
-            const humidity = data.hourly && data.hourly.relative_humidity_2m
-                ? data.hourly.relative_humidity_2m[hourIdx] + '%'
-                : '—';
-            const precipProb = data.hourly && data.hourly.precipitation_probability
-                ? data.hourly.precipitation_probability[hourIdx] + '%'
-                : '—';
+                // Get current hour humidity
+                const now = new Date();
+                const hourIdx = now.getHours();
+                const humidity = data.hourly && data.hourly.relative_humidity_2m
+                    ? data.hourly.relative_humidity_2m[hourIdx] + '%'
+                    : '—';
+                const precipProb = data.hourly && data.hourly.precipitation_probability
+                    ? data.hourly.precipitation_probability[hourIdx] + '%'
+                    : '—';
 
-            document.getElementById('weather-info').innerHTML = `
+                document.getElementById('weather-info').innerHTML = `
                 Стан: <span style="color:#fff">${wDescription}</span><br>
                 Температура: <span style="color:#fff">${cw.temperature}°C</span><br>
                 Вітер: <span style="color:#fff">${cw.windspeed} км/год</span><br>
                 Вологість: <span style="color:#fff">${humidity}</span><br>
-                Імов. опадів: <span style="color:${parseInt(precipProb)>50 ? 'var(--c-red)' : 'var(--accent)'}">${precipProb}</span>
+                Імов. опадів: <span style="color:${parseInt(precipProb) > 50 ? 'var(--c-red)' : 'var(--accent)'}">${precipProb}</span>
             `;
-        } catch (e) {
-            document.getElementById('weather-info').innerText = 'Метеовузол офлайн.';
+            } catch (e) {
+                document.getElementById('weather-info').innerText = 'Метеовузол офлайн.';
+            }
         }
-    }
 
-    window.onload = init;
+        window.onload = init;
     </script>
 </body>
 
